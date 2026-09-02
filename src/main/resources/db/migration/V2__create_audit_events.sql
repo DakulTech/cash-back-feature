@@ -22,8 +22,8 @@ CREATE INDEX idx_audit_events_source_2026_08 ON audit_events_2026_08(source);
 CREATE INDEX idx_audit_events_source_2026_09 ON audit_events_2026_09(source);
 
 -- Composite index for combined queries
-CREATE INDEX idx_audit_events_type_timestamp_2026_08 
+CREATE INDEX idx_audit_events_type_timestamp_2026_08
     ON audit_events_2026_08(event_type, timestamp);
 
-CREATE INDEX idx_audit_events_type_timestamp_2026_09 
+CREATE INDEX idx_audit_events_type_timestamp_2026_09
     ON audit_events_2026_09(event_type, timestamp);
