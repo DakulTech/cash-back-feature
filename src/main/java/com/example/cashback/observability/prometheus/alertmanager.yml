@@ -1,0 +1,40 @@
+global:
+  resolve_timeout: 5m
+
+route:
+  receiver: 'default'
+  group_by: ['alertname']
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 2h
+
+  routes:
+    # Critical alerts → PagerDuty
+    - match:
+        severity: 'critical'
+      receiver: 'pagerduty'
+
+    # Warning alerts → Slack
+    - match:
+        severity: 'warning'
+      receiver: 'slack'
+
+receivers:
+  - name: 'default'
+    slack_configs:
+      - send_resolved: true
+        channel: '#alerts'
+        username: 'Grafana'
+        api_url: '${SLACK_WEBHOOK_URL}'
+
+  - name: 'pagerduty'
+    pagerduty_configs:
+      - send_resolved: true
+        routing_key: 'YOUR_PAGERDUTY_ROUTING_KEY'
+
+  - name: 'slack'
+    slack_configs:
+      - send_resolved: true
+        channel: '#monitoring'
+        username: 'Grafana'
+        api_url: '${SLACK_WEBHOOK_URL}'

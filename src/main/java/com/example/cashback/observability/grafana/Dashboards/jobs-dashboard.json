@@ -1,0 +1,69 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "Cashback Rewards - Quartz Jobs",
+    "timezone": "browser",
+    "panels": [
+      {
+        "type": "graph",
+        "title": "Job Executions (Counts)",
+        "targets": [
+          {
+            "expr": "jobs_executed_total",
+            "legendFormat": "{{job}}",
+            "refId": "A"
+          }
+        ],
+        "lines": true,
+        "fill": 1,
+        "linewidth": 2,
+        "span": 12
+      },
+      {
+        "type": "table",
+        "title": "Last Execution Timestamp",
+        "targets": [
+          {
+            "expr": "jobs_executed_timestamp",
+            "legendFormat": "{{job}}",
+            "refId": "B"
+          }
+        ],
+        "columns": [
+          { "text": "Job", "value": "job" },
+          { "text": "Last Run", "value": "value" }
+        ],
+        "span": 12
+      },
+      {
+        "type": "table",
+        "title": "Failed Jobs",
+        "targets": [
+          {
+            "expr": "jobs_failed_total",
+            "legendFormat": "{{job}}",
+            "refId": "C"
+          }
+        ],
+        "columns": [
+          { "text": "Job", "value": "job" },
+          { "text": "Failures", "value": "value" }
+        ],
+        "span": 12,
+        "thresholds": [
+          {
+            "value": 0,
+            "color": "green"
+          },
+          {
+            "value": 1,
+            "color": "red"
+          }
+        ],
+        "transform": "table"
+      }
+    ],
+    "schemaVersion": 27,
+    "version": 3
+  }
+}

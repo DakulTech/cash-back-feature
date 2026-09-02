@@ -1,0 +1,13 @@
+{
+  "name": "Slack Alerts",
+  "type": "slack",
+  "isDefault": true,
+  "settings": {
+    "url": "${SLACK_WEBHOOK_URL}",
+    "username": "Grafana",
+    "icon_emoji": ":warning:",
+    "mentionUsers": "",
+    "mentionGroups": "",
+    "mentionChannel": ""
+  }
+}

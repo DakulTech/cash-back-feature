@@ -1,0 +1,33 @@
+groups:
+  - name: cashback-rewards-jobs
+    interval: 30s
+    rules:
+      # Alert if AuditPartitionJob hasn't run in the last 35 days
+      - alert: AuditPartitionJobMissed
+        expr: time() - max_over_time(jobs_executed_timestamp{job="AuditPartitionJob"}[35d]) > 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "AuditPartitionJob has not run in the last 35 days"
+          description: "The monthly partition creation job missed its schedule. Check Quartz logs and DB health."
+
+      # Alert if SettlementAggregationJob hasn't run in the last 8 days
+      - alert: SettlementAggregationJobMissed
+        expr: time() - max_over_time(jobs_executed_timestamp{job="SettlementAggregationJob"}[8d]) > 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "SettlementAggregationJob has not run in the last 8 days"
+          description: "The weekly settlement aggregation job missed its schedule. Investigate Quartz scheduler and DB writes."
+
+      # Alert if any job has failures
+      - alert: QuartzJobFailures
+        expr: increase(jobs_failed_total[5m]) > 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Quartz job failure detected"
+          description: "One or more jobs have reported failures in the last 5 minutes. Check logs for details."
