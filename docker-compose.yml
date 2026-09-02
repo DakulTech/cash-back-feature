@@ -1,0 +1,75 @@
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: cash-back
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in the environment}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d cash-back"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  warehouse:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: cashback_warehouse
+      POSTGRES_USER: warehouse
+      POSTGRES_PASSWORD: ${WAREHOUSE_PASSWORD:?Set WAREHOUSE_PASSWORD in the environment}
+    ports:
+      - "5433:5432"
+    volumes:
+      - warehouse-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U warehouse -d cashback_warehouse"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      DB_USERNAME: postgres
+      DB_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in the environment}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/cash-back
+      SPRING_REDIS_HOST: redis
+      SPRING_REDIS_PORT: 6379
+      REDSHIFT_JDBC_URL: jdbc:postgresql://warehouse:5432/cashback_warehouse
+      REDSHIFT_DB_USERNAME: warehouse
+      REDSHIFT_DB_PASSWORD: ${WAREHOUSE_PASSWORD:?Set WAREHOUSE_PASSWORD in the environment}
+      WAREHOUSE_DATASOURCE_DRIVER_CLASS_NAME: org.postgresql.Driver
+      REDSHIFT_NAMESPACE_ARN: local-compose-warehouse
+      AWS_REGION: eu-north-1
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      warehouse:
+        condition: service_healthy
+
+volumes:
+  postgres-data:
+  redis-data:
+  warehouse-data:
