@@ -38,11 +38,14 @@ public class OutboxEvent {
     @Builder.Default
     private LocalDateTime nextAttemptAt = LocalDateTime.now();
 
+    @Column(length = 1000)
+    private String lastError;
+
     @Column(nullable = false, updatable = false)
     @Builder.Default
     private LocalDateTime createdAt = LocalDateTime.now();
 
     public enum Status {
-        PENDING, PROCESSING, COMPLETED
+        PENDING, PROCESSING, COMPLETED, FAILED, DEAD_LETTER
     }
 }

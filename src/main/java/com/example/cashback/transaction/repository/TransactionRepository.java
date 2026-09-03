@@ -5,7 +5,6 @@ import com.example.cashback.transaction.model.TransactionType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -31,6 +30,8 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
             @Param("id") UUID id, Pageable pageable);
 
     boolean existsByIdAndCashbackAmountIsNotNull(UUID id);
+
+    java.util.Optional<Transaction> findByUserIdAndIdempotencyKey(UUID userId, String idempotencyKey);
 
     // Find transactions by user and type
     @Query("SELECT t FROM Transaction t WHERE t.user.id = :userId AND t.type = :type")

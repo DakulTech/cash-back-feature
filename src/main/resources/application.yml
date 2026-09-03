@@ -34,6 +34,8 @@ cashback:
   referral-cache-ttl: 30d
   referral-local-max-bonus: 8000
   referral-uk-max-bonus: 10000
+  outbox:
+    worker-enabled: false
 
 warehouse:
   redshift:

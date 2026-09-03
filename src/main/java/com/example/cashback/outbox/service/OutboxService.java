@@ -21,17 +21,21 @@ public class OutboxService {
 
     @Transactional
     public void enqueue(CashbackBalanceChangedEvent event) {
-        save("CASHBACK_BALANCE_CHANGED", event);
+        schedule("CASHBACK_BALANCE_CHANGED", event);
     }
 
     @Transactional
     public void enqueue(ReferralBonusChangedEvent event) {
-        save("REFERRAL_BONUS_CHANGED", event);
+        schedule("REFERRAL_BONUS_CHANGED", event);
     }
 
     @Transactional
     public void enqueueWarehouseSync(UUID transactionId) {
-        save("WAREHOUSE_SYNC_REQUESTED", transactionId);
+        schedule("WAREHOUSE_SYNC_REQUESTED", transactionId);
+    }
+
+    private void schedule(String eventType, Object event) {
+        save(eventType, event);
     }
 
     private void save(String eventType, Object event) {

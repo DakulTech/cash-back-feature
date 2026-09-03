@@ -8,6 +8,8 @@ group = 'com.example'
 version = '0.0.1-SNAPSHOT'
 sourceCompatibility = '25'
 
+def lombokVersion = '1.18.48'
+
 repositories {
     mavenCentral()
 }
@@ -36,8 +38,10 @@ dependencies {
 
 
     // Lombok
-    compileOnly 'org.projectlombok:lombok:1.18.42'
-    annotationProcessor 'org.projectlombok:lombok:1.18.42'
+    compileOnly "org.projectlombok:lombok:${lombokVersion}"
+    annotationProcessor "org.projectlombok:lombok:${lombokVersion}"
+    testCompileOnly "org.projectlombok:lombok:${lombokVersion}"
+    testAnnotationProcessor "org.projectlombok:lombok:${lombokVersion}"
 
     // Observability
     implementation 'io.opentelemetry:opentelemetry-api:1.43.0'
@@ -46,6 +50,7 @@ dependencies {
 
     // Testing
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testRuntimeOnly 'com.h2database:h2:2.2.224'
     testImplementation 'net.bytebuddy:byte-buddy:1.17.7'
     testImplementation 'net.bytebuddy:byte-buddy-agent:1.17.7'
 }

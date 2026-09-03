@@ -19,4 +19,10 @@ public interface OutboxEventRepository extends JpaRepository<OutboxEvent, UUID> 
     List<OutboxEvent> findReady(@Param("statuses") List<OutboxEvent.Status> statuses,
             @Param("now") LocalDateTime now, Pageable pageable);
 
+    @Lock(LockModeType.PESSIMISTIC_READ)
+    @Query("SELECT e FROM OutboxEvent e WHERE e.status = :status ORDER BY e.createdAt")
+    List<OutboxEvent> findByStatus(@Param("status") OutboxEvent.Status status, Pageable pageable);
+
+    long countByStatus(OutboxEvent.Status status);
+
 }

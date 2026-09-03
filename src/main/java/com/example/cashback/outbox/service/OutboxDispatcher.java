@@ -9,6 +9,8 @@ import com.example.cashback.user.event.CashbackBalanceChangedEvent;
 import com.example.cashback.user.service.CashbackBalanceCacheService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.annotation.Profile;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -18,10 +20,15 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
+@Profile("worker")
+@ConditionalOnProperty(prefix = "cashback.outbox", name = "worker-enabled", havingValue = "true")
 @RequiredArgsConstructor
 public class OutboxDispatcher {
 
     private static final int BATCH_SIZE = 100;
+    private static final int MAX_ATTEMPTS = 8;
+    private static final int MAX_BACKOFF_SECONDS = 300;
+
     private final OutboxEventRepository repository;
     private final ObjectMapper objectMapper;
     private final CashbackBalanceCacheService balanceCacheService;
@@ -32,7 +39,7 @@ public class OutboxDispatcher {
     @Transactional
     public void dispatch() {
         List<OutboxEvent> events = repository.findReady(
-                List.of(OutboxEvent.Status.PENDING, OutboxEvent.Status.PROCESSING),
+                List.of(OutboxEvent.Status.PENDING, OutboxEvent.Status.PROCESSING, OutboxEvent.Status.FAILED),
                 LocalDateTime.now(), PageRequest.of(0, BATCH_SIZE));
         for (OutboxEvent event : events) {
             try {
@@ -41,12 +48,21 @@ public class OutboxDispatcher {
                 dispatch(event);
                 event.setStatus(OutboxEvent.Status.COMPLETED);
                 event.setNextAttemptAt(LocalDateTime.now().plusYears(100));
+                event.setLastError(null);
                 repository.save(event);
             } catch (RuntimeException exception) {
                 int attempts = event.getAttempts() + 1;
                 event.setAttempts(attempts);
-                event.setStatus(OutboxEvent.Status.PENDING);
-                event.setNextAttemptAt(LocalDateTime.now().plusSeconds(Math.min(300, 1L << Math.min(attempts, 8))));
+                event.setLastError(exception.getMessage());
+
+                if (attempts >= MAX_ATTEMPTS) {
+                    event.setStatus(OutboxEvent.Status.DEAD_LETTER);
+                    event.setNextAttemptAt(LocalDateTime.now().plusYears(100));
+                } else {
+                    event.setStatus(OutboxEvent.Status.FAILED);
+                    event.setNextAttemptAt(LocalDateTime.now().plusSeconds(
+                            Math.min(MAX_BACKOFF_SECONDS, 1L << Math.min(attempts, 8))));
+                }
                 repository.save(event);
             }
         }

@@ -1,6 +1,7 @@
 package com.example.cashback.transaction.service;
 
 import com.example.cashback.transaction.model.Transaction;
+import com.example.cashback.transaction.dto.TransactionRequest;
 import com.example.cashback.transaction.repository.TransactionRepository;
 import com.example.cashback.user.model.User;
 import com.example.cashback.user.service.UserService;
@@ -26,7 +27,21 @@ public class TransactionService {
     private final OutboxService outboxService;
 
     @Transactional
-    public Transaction processTransaction(Transaction transaction) {
+    public Transaction processTransaction(TransactionRequest request) {
+        Transaction transaction = request.toTransaction();
+        Transaction existing = transactionRepository.findByUserIdAndIdempotencyKey(
+                transaction.getUser().getId(), transaction.getIdempotencyKey()).orElse(null);
+        if (existing != null) {
+            if (!sameSubmission(existing, transaction)) {
+                throw new IllegalArgumentException("Idempotency key was already used with a different transaction");
+            }
+            return existing;
+        }
+
+        return processNewTransaction(transaction);
+    }
+
+    private Transaction processNewTransaction(Transaction transaction) {
         if (transaction.getId() != null
                 && transactionRepository.existsByIdAndCashbackAmountIsNotNull(transaction.getId())) {
             throw new IllegalStateException("Transaction has already received cashback: " + transaction.getId());
@@ -68,6 +83,15 @@ public class TransactionService {
         }
 
         return savedTransaction;
+    }
+
+    private boolean sameSubmission(Transaction existing, Transaction request) {
+        return existing.getUser().getId().equals(request.getUser().getId())
+                && existing.getMerchant().getId().equals(request.getMerchant().getId())
+                && java.util.Objects.equals(existing.getOffer() == null ? null : existing.getOffer().getId(),
+                        request.getOffer() == null ? null : request.getOffer().getId())
+                && existing.getAmount().compareTo(request.getAmount()) == 0
+                && existing.getType() == request.getType();
     }
 
     public List<Transaction> getUserTransactions(UUID userId) {

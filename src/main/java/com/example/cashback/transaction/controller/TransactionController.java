@@ -1,6 +1,7 @@
 package com.example.cashback.transaction.controller;
 
 import com.example.cashback.transaction.dto.TransactionAnalyticsDTO;
+import com.example.cashback.transaction.dto.TransactionRequest;
 import com.example.cashback.transaction.model.Transaction;
 import com.example.cashback.transaction.service.TransactionService;
 import com.example.cashback.transaction.service.TransactionAnalyticsService;
@@ -22,9 +23,9 @@ public class TransactionController {
     private final TransactionAnalyticsService transactionAnalyticsService;
 
     @PostMapping
-    @PreAuthorize("@accessControl.canAccessUser(#transaction.user.id)")
-    public ResponseEntity<Transaction> createTransaction(@Valid @RequestBody Transaction transaction) {
-        return ResponseEntity.ok(transactionService.processTransaction(transaction));
+    @PreAuthorize("@accessControl.canAccessUser(#request.user.id)")
+    public ResponseEntity<Transaction> createTransaction(@Valid @RequestBody TransactionRequest request) {
+        return ResponseEntity.ok(transactionService.processTransaction(request));
     }
 
     @GetMapping("/user/{userId}")

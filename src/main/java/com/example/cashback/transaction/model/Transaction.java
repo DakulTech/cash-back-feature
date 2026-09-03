@@ -13,7 +13,8 @@ import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.NotNull;
 
 @Entity
-@Table(name = "transactions")
+@Table(name = "transactions", uniqueConstraints = @UniqueConstraint(name = "uq_transactions_user_idempotency_key", columnNames = {
+        "user_id", "idempotency_key" }))
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -50,6 +51,9 @@ public class Transaction {
     @Digits(integer = 16, fraction = 2)
     @Column(precision = 18, scale = 2)
     private BigDecimal cashbackAmount;
+
+    @Column(name = "idempotency_key", nullable = false, length = 128)
+    private String idempotencyKey;
 
     @Builder.Default
     @Column(nullable = false)
