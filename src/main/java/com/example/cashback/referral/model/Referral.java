@@ -28,6 +28,8 @@ public class Referral {
 
     private BigDecimal bonusAmount;
 
+    private String status;
+
     @Builder.Default
     private LocalDateTime createdAt = LocalDateTime.now();
 }

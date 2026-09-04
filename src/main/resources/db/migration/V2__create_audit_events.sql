@@ -1,10 +1,11 @@
 -- Create partitioned table
 CREATE TABLE audit_events (
-    id UUID PRIMARY KEY,
+    id UUID NOT NULL,
     event_type VARCHAR(255) NOT NULL,
     source VARCHAR(255) NOT NULL,
     details TEXT,
-    timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id, timestamp)
 ) PARTITION BY RANGE (timestamp);
 
 -- Create initial monthly partitions

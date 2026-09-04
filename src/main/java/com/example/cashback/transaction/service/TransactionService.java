@@ -64,14 +64,16 @@ public class TransactionService {
         if (!eligibilityCacheService.claim(savedTransaction.getId())) {
             throw new IllegalStateException("Transaction has already received cashback: " + savedTransaction.getId());
         }
-        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-            @Override
-            public void afterCompletion(int status) {
-                if (status != STATUS_COMMITTED) {
-                    eligibilityCacheService.release(savedTransaction.getId());
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCompletion(int status) {
+                    if (status != STATUS_COMMITTED) {
+                        eligibilityCacheService.release(savedTransaction.getId());
+                    }
                 }
-            }
-        });
+            });
+        }
 
         try {
             User user = savedTransaction.getUser();

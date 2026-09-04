@@ -25,6 +25,7 @@ import java.util.stream.IntStream;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -152,7 +153,7 @@ class TransactionServiceTest {
         });
 
         assertEquals(2, saves.get());
-        verify(userService).creditReward(same(user), same(new BigDecimal("2.50")));
+        verify(userService).creditReward(same(user), eq(new BigDecimal("2.50")));
         verify(userService, org.mockito.Mockito.times(1))
                 .creditReward(any(User.class), any(BigDecimal.class));
     }

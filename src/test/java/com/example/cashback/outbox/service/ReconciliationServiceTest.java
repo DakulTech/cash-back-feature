@@ -36,8 +36,8 @@ class ReconciliationServiceTest {
 
     @Test
     void recordsTransactionDriftAndDeadLetterCount() {
-        Transaction goodTransaction = Transaction.builder().build();
-        Transaction badTransaction = Transaction.builder().build();
+        Transaction goodTransaction = Transaction.builder().id(java.util.UUID.randomUUID()).build();
+        Transaction badTransaction = Transaction.builder().id(java.util.UUID.randomUUID()).build();
 
         when(transactionRepository.count()).thenReturn(2L);
         when(transactionRepository.findAll(any(PageRequest.class)))

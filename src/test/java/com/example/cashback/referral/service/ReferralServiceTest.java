@@ -51,8 +51,8 @@ class ReferralServiceTest {
         User referrer = User.builder().id(referrerId).build();
         when(referralRepository.existsByReferredUserId(referredUserId)).thenReturn(false);
         when(userService.findByReferralCode("LOCAL123")).thenReturn(referrer);
-        when(userService.findByIdForUpdate(referrerId)).thenReturn(referrer);
-        when(referralRepository.totalBonusByReferrerId(referrerId)).thenReturn(new BigDecimal("8000.00"));
+        when(referralRepository.reserveBonus(referrerId, new BigDecimal("8000.00"),
+                new BigDecimal("8000.00"))).thenReturn(0);
 
         assertThrows(IllegalStateException.class,
                 () -> referralService.registerReferral("LOCAL123", referredUserId, false));

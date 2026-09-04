@@ -12,9 +12,11 @@ PostgreSQL is the system of record. Redis provides cache and short-lived concurr
 - [Architecture](#architecture)
 - [Requirements](#requirements)
 - [Run locally](#run-locally)
+- [Docker services](#docker-services)
 - [API](#api)
 - [Idempotency](#idempotency)
 - [Outbox worker](#outbox-worker)
+- [Observability](#observability)
 - [Configuration](#configuration)
 - [Database migrations](#database-migrations)
 - [Tests](#tests)
@@ -69,7 +71,7 @@ The modular monolith keeps database transactions local and makes development and
 - Docker Desktop with Compose
 - Gradle Wrapper
 
-PostgreSQL and Redis are normally started through Docker Compose. Redshift is optional for local development because Compose provides a PostgreSQL warehouse substitute.
+PostgreSQL, Redis, the local warehouse substitute, the outbox worker, Prometheus, Alertmanager, and Grafana run through Docker Compose. Redshift is optional for local development because Compose provides a PostgreSQL warehouse substitute.
 
 ## Run locally
 
@@ -78,10 +80,51 @@ Set the required local passwords before starting Compose:
 ```powershell
 $env:POSTGRES_PASSWORD = "local-postgres-password"
 $env:WAREHOUSE_PASSWORD = "local-warehouse-password"
-docker compose up --build
+$env:GRAFANA_ADMIN_PASSWORD = "admin"
+docker compose up -d --build
 ```
 
-The API runs at `http://localhost:8080`.
+The first image build may retry Gradle and Maven downloads when Docker Hub or Maven Central has transient network failures. The Gradle wrapper uses a 120-second distribution download timeout.
+
+The API runs at `http://localhost:8080`. Follow application logs with:
+
+```powershell
+docker compose logs -f app
+```
+
+Stop the environment with:
+
+```powershell
+docker compose down
+```
+
+### Fresh local database
+
+PostgreSQL 18 uses major-version-specific data directories. The Compose file mounts the v18-compatible paths and uses dedicated `*-data-v18` volumes. If an older local volume is still present, stop the stack and remove only the old database volumes before restarting:
+
+```powershell
+docker compose down
+docker volume ls | Select-String "cash-back-feature_(postgres-data|warehouse-data)$"
+```
+
+Only remove those old volumes if their data is disposable. The current Compose volumes are `postgres-data-v18` and `warehouse-data-v18`.
+
+## Docker services
+
+| Service | Purpose | Local address |
+| --- | --- | --- |
+| `app` | Spring Boot API | `http://localhost:8080` |
+| `worker` | Dedicated asynchronous outbox dispatcher | Internal container |
+| `postgres` | Application system of record | `localhost:5432` |
+| `warehouse` | Local PostgreSQL warehouse substitute | `localhost:5433` |
+| `redis` | Cache and concurrency controls | `localhost:6379` |
+| `prometheus` | Metrics scraping and alert rules | `http://localhost:9090` |
+| `alertmanager` | Prometheus alert routing | `http://localhost:9093` |
+| `grafana` | Metrics dashboards | `http://localhost:3000` |
+
+The worker is a separate container built from the same application image. It runs with the `worker` Spring profile and `CASHBACK_OUTBOX_WORKER_ENABLED=true`; the API container leaves the dispatcher disabled.
+
+![Cashback Docker services running in Docker Desktop](docker-image.png)
 
 Stop the environment with:
 
@@ -196,6 +239,37 @@ $env:CASHBACK_OUTBOX_WORKER_ENABLED = "true"
 
 The dispatcher processes `PENDING`, `PROCESSING`, and `FAILED` events. It retries with bounded exponential backoff and moves events to `DEAD_LETTER` after the retry limit. Delivery is at least once, so Redis and warehouse handlers must be idempotent.
 
+Check the worker directly with:
+
+```powershell
+docker compose logs -f worker
+docker compose ps worker
+```
+
+## Observability
+
+The Compose stack uses the existing files under `src/main/java/com/example/cashback/observability`:
+
+- Prometheus scrapes `app:8080/actuator/prometheus` every 15 seconds.
+- `alerts.yml` defines job and Quartz failure rules.
+- Alertmanager receives Prometheus alerts on `alertmanager:9093`.
+- Grafana is provisioned with Prometheus at `http://prometheus:9090`.
+- Grafana is available at `http://localhost:3000` with the configured `GRAFANA_ADMIN_PASSWORD`.
+
+The local Compose stack uses `alertmanager-local.yml`, which accepts alerts without requiring Slack or PagerDuty credentials. The production-oriented `alertmanager.yml` remains available for deployments that provide notification secrets.
+
+Prometheus and Alertmanager configuration files are mounted directly from:
+
+```text
+src/main/java/com/example/cashback/observability/prometheus
+```
+
+Grafana provisioning and dashboards are stored under:
+
+```text
+src/main/java/com/example/cashback/observability/grafana
+```
+
 ## Configuration
 
 Required environment variables:
@@ -232,7 +306,9 @@ The transaction eligibility TTL must remain between 24 and 48 hours. Never commi
 
 ## Database migrations
 
-Flyway applies migrations from `src/main/resources/db/migration` at startup. Add new migrations with a higher version number.
+Flyway applies migrations from `src/main/resources/db/migration` at startup. The application PostgreSQL datasource is explicitly primary, so Flyway and JPA target `cash-back`; the separate warehouse datasource is used only by ETL and analytics services.
+
+Add new migrations with a higher version number. A fresh database should contain `flyway_schema_history` after the API starts.
 
 Important hardening migrations include:
 
@@ -242,7 +318,16 @@ Important hardening migrations include:
 - `V22`: referral bonus counter
 - `V23`: transaction idempotency key and unique constraint
 
+`V2` creates a range-partitioned audit table. Its composite primary key includes `timestamp`, as required by PostgreSQL partitioned-table constraints.
+
 The warehouse schema is currently created by ETL and archive services. Production should move warehouse DDL into a separately versioned migration process. The `prod` profile expects the official Quartz PostgreSQL schema to exist.
+
+To inspect migration status locally:
+
+```powershell
+docker exec cash-back-feature-postgres-1 psql -U postgres -d cash-back -c "\dt"
+docker exec cash-back-feature-postgres-1 psql -U postgres -d cash-back -c "SELECT installed_rank, version, description, success FROM flyway_schema_history ORDER BY installed_rank;"
+```
 
 ## Tests
 

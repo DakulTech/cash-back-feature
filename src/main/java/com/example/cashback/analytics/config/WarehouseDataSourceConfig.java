@@ -13,6 +13,20 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 public class WarehouseDataSourceConfig {
 
     @Bean
+    @ConfigurationProperties("spring.datasource")
+    @org.springframework.context.annotation.Primary
+    public DataSourceProperties applicationDataSourceProperties() {
+        return new DataSourceProperties();
+    }
+
+    @Bean
+    @org.springframework.context.annotation.Primary
+    public DataSource dataSource(
+            @Qualifier("applicationDataSourceProperties") DataSourceProperties properties) {
+        return properties.initializeDataSourceBuilder().build();
+    }
+
+    @Bean
     @ConfigurationProperties("warehouse.datasource")
     public DataSourceProperties warehouseDataSourceProperties() {
         return new DataSourceProperties();

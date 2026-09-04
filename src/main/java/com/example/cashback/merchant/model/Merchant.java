@@ -26,6 +26,8 @@ public class Merchant {
 
     private String category; // e.g. Restaurant, Telecom, etc.
 
+    private String country;
+
     @Builder.Default
     private Boolean active = true;
 }

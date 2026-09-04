@@ -3,9 +3,11 @@ package com.example.cashback.outbox.service;
 import com.example.cashback.outbox.repository.OutboxEventRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.jackson.JacksonAutoConfiguration;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.context.annotation.Import;
+import org.junit.jupiter.api.BeforeEach;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.transaction.annotation.Propagation;
@@ -20,7 +22,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
         "spring.jpa.hibernate.ddl-auto=create-drop"
 })
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.ANY)
-@Import(OutboxService.class)
+@Import({ OutboxService.class, JacksonAutoConfiguration.class })
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
 class OutboxTransactionIntegrationTest {
 
@@ -32,6 +34,11 @@ class OutboxTransactionIntegrationTest {
 
     @Autowired
     private TransactionTemplate transactionTemplate;
+
+    @BeforeEach
+    void clearOutbox() {
+        repository.deleteAll();
+    }
 
     @Test
     void commitsOutboxRowWithBusinessTransaction() {
